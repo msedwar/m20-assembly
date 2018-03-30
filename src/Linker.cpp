@@ -187,6 +187,7 @@ void m20::Linker::readFiles(const std::vector<const std::string> &files)
                 if (address < sections[j].end)
                 {
                     section = j;
+                    break;
                 }
             }
 
@@ -271,21 +272,33 @@ void m20::Linker::fixupSection(unsigned int index)
             if (ifs != fileSymbols.end()
                 && ifs->type == SymbolType::LOCAL)
             {
-                fixupSymbol(reloc.type,
-                            section.address + reloc.address,
-                            section.address + ifs->address);
+                fixupSymbol(
+                        reloc.type,
+                        section.address + (reloc.address - section.begin),
+                        (unsigned int)
+                                ((int64_t) sections[ifs->section].address
+                                 + ((int64_t) ifs->address
+                                    - (int64_t) sections[ifs->section].begin))
+                );
             }
             else if (ids != definedSymbols.end())
             {
-                const auto it = symbols.find(ids->second)
-                        ->second.find(
-                                {reloc.label, 0, 0, SymbolType::UNDEFINED}
-                        );
-                const Symbol &other = *it;
+                const auto symbolIt = symbols.find(ids->second);
+                assert(symbolIt != symbols.end());
+                const auto symbol = symbolIt->second.find(
+                        {reloc.label, 0, 0, SymbolType::UNDEFINED}
+                );
+                assert(symbol != symbolIt->second.end());
+                const Symbol &other = *symbol;
 
-                fixupSymbol(reloc.type,
-                            section.address + reloc.address,
-                            sections[other.section].address + other.address);
+                fixupSymbol(
+                        reloc.type,
+                        section.address + (reloc.address - section.begin),
+                        (unsigned int)
+                                ((int64_t) sections[other.section].address
+                                 + ((int64_t) other.address
+                                    - (int64_t) sections[other.section].begin))
+                );
             }
             else
             {
@@ -312,7 +325,16 @@ void m20::Linker::fixupSection(unsigned int index)
 void m20::Linker::fixupSymbol(InstructionType type, unsigned int current,
                               unsigned int address)
 {
-    bytes[current] |= getImmediate(address, current, type);
+    int instr = 0;
+    instr |= ((unsigned int) bytes[current] & 0xFF) << 24;
+    instr |= ((unsigned int) bytes[current + 1] & 0xFF) << 16;
+    instr |= ((unsigned int) bytes[current + 2] & 0xFF) << 8;
+    instr |= ((unsigned int) bytes[current + 3] & 0xFF);
+    instr |= getImmediate(current, address, type);
+    bytes[current] = (char) ((instr >> 24) & 0xFF);
+    bytes[current + 1] = (char) ((instr >> 16) & 0xFF);
+    bytes[current + 2] = (char) ((instr >> 8) & 0xFF);
+    bytes[current + 3] = (char) (instr & 0xFF);
 }
 
 int m20::Linker::getImmediate(unsigned int addr,
@@ -320,26 +342,30 @@ int m20::Linker::getImmediate(unsigned int addr,
                                  InstructionType type)
 {
     bool relative = false;  // Relative or absolute
-    bool aligned = true;
+    bool relativePc = false;
+    bool aligned = false;
+
     int bits = 0;           // Number of bits
 
     switch (type)
     {
         case InstructionType::D2_LABEL:
             relative = false;
-            aligned = false;
             bits = 16;
             break;
         case InstructionType::B_RELATIVE_LABEL:
             relative = true;
+            relativePc = true;
+            aligned = true;
             bits = 23;
             break;
         case InstructionType::M_RELATIVE_LABEL:
             relative = true;
+            relativePc = true;
             bits = 16;
             break;
         case InstructionType::M_BASE_OFFSET_LABEL:
-            relative = false;
+            relative = true;
             bits = 12;
             break;
         default:
@@ -350,7 +376,12 @@ int m20::Linker::getImmediate(unsigned int addr,
     auto offset = (int) label;
     if (relative)
     {
-        offset = label - addr - 4;
+        offset = label - addr;
+
+        if (relativePc)
+        {
+            offset -= 4;
+        }
     }
 
     if (aligned && offset % 4 != 0)

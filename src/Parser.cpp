@@ -593,7 +593,7 @@ unsigned int m20::Parser::parseRegister(const std::string &str,
         }
         return reg;
     }
-    catch (const std::out_of_range &e)
+    catch (...)
     {
         errors.emplace_back(M20ErrorType::SYNTAX, getCurrent(),
                             "Invalid register");

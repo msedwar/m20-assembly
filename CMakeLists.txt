@@ -15,6 +15,7 @@ set(SOURCES
         ${SRC_DIR}/Lexer.cpp
         ${SRC_DIR}/Linker.cpp
         ${SRC_DIR}/Parser.cpp
+        ${SRC_DIR}/Simulator.cpp
         ${SRC_DIR}/Token.cpp
         ${SRC_DIR}/Utils.cpp)
 set(HEADERS
@@ -23,8 +24,10 @@ set(HEADERS
         ${SRC_DIR}/Lexer.h
         ${SRC_DIR}/Linker.h
         ${SRC_DIR}/Parser.h
+        ${SRC_DIR}/Simulator.h
         ${SRC_DIR}/Token.h
         ${SRC_DIR}/Utils.h)
 
 add_executable(assemble ${SRC_DIR}/assemble.cpp ${SOURCES} ${HEADERS})
 add_executable(link ${SRC_DIR}/link.cpp ${SOURCES} ${HEADERS})
+add_executable(simulate ${SRC_DIR}/simulate.cpp ${SOURCES} ${HEADERS})

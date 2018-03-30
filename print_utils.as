@@ -16,22 +16,37 @@ section .text
 ;   r1          : void* buffer, Pointer to buffer
 itoua:
     cmp r0, #0
+    mov r3, r1
+    mov r2, #0
+    strb r2, r1         ; Add null-terminator
+    add r1, r1, #1      ; buffer++
     beq itoua_put_zero
 
     itoua_loop:
     udv r2, r0, #10
+    mul r2, r2, #10
     sub r2, r0, r2      ; temp = value % 10
     udv r0, r0, #10     ; value /= 10
     add r2, r2, 0x30    ; temp = temp + '0'
-    str r2, r1          ; *buffer = temp
+    strb r2, r1         ; *buffer = temp
     add r1, r1, #1      ; buffer++
     itoua_loop_cond:
     cmp r0, #0
     bne itoua_loop      ; while (value != 0)
 
     itoua_return:
-    mov r2, #0
-    str r2, r1          ; Add null-terminator
+    sub r1, r1, #1
+
+    itoua_reverse:
+    ldrb r2, r3
+    ldrb r0, r1
+    strb r2, r1
+    strb r0, r3
+    add r3, r3, #1
+    sub r1, r1, #1
+    cmp r1, r3
+    bgt itoua_reverse
+
     mov pc, lp          ; return
 
     itoua_put_zero:
@@ -46,15 +61,15 @@ itoua:
 ;   r0          : void* buffer, Pointer to buffer
 print:
     push lp
-    push r4
-    mov r4, r0          ; r4 = buffer
+    push r7
+    mov r3, r0          ; r3 = buffer
     bwl strlen          ; strlen(buffer)
     mov r2, r0
-    mov r1, r4
+    mov r1, r3
     mov r0, #1          ; fd = stdout
     mov r7, #4          ; r7 = 0x4 (write)
     swi #0              ; syscall write(stdout, &string, len)
-    pop r4
+    pop r7
     pop lp
     mov pc, lp          ; return
 
@@ -65,8 +80,9 @@ print:
 ;   r0          : void* buffer, Pointer to buffer
 ;   return(r0)  : int length, Length of buffer
 strlen:
-    mov r1, #0
+    mov r1, #-1
     strlen_loop:
+    add r1, r1, #1
     ldrb r2, r0, r1
     cmp r2, #0
     bne strlen_loop

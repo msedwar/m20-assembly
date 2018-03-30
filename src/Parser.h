@@ -23,7 +23,8 @@ namespace m20
         SYNTAX,
         DIRECTIVE,
         SECTION,
-        LABEL
+        LABEL,
+        ALIGNMENT
     };
 
     struct M20Error

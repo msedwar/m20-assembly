@@ -345,13 +345,13 @@ void m20::Assembler::generateDataProcessing(const Instruction &instr)
     code |= getConditionNibble(instr.cond);
     code |= getDataOpcode(instr.command);
 
-    int hasUpdate = 0x04000000;
-    code |= hasUpdate;
+    // TODO(msedwar): updates
+//    int hasUpdate = 0x04000000;
+//    code |= hasUpdate;
 
     int hasImmediate = 0x02000000;
     if (instr.type == InstructionType::D3_REGISTER
         || instr.type == InstructionType::D2_REGISTER
-        || instr.type == InstructionType::D2_LABEL
         || instr.type == InstructionType::D1_REGISTER
         || instr.type == InstructionType::EMPTY_TYPE)
     {
@@ -390,7 +390,13 @@ void m20::Assembler::generateDataProcessing(const Instruction &instr)
     }
 
     // Check word aligned
-    assert(bytes.size() % 4 == 0);
+    if (bytes.size() % 4 != 0)
+    {
+        errors.emplace_back(M20ErrorType::ALIGNMENT,
+                            instr.token,
+                            "Instruction must be 4 byte aligned");
+        return;
+    }
     bytes.push_back((char) ((code >> 24) & 0xFF));
     bytes.push_back((char) ((code >> 16) & 0xFF));
     bytes.push_back((char) ((code >> 8) & 0xFF));
@@ -421,7 +427,6 @@ void m20::Assembler::generateDataLoad(const Instruction &instr)
     code |= hasImmediate;
 
     int operandMask = 0x00000FFF;
-
     if (instr.type == InstructionType::M_RELATIVE
         || instr.type == InstructionType::M_RELATIVE_LABEL
         || instr.type == InstructionType::M_DIRECT_INDEX)
@@ -443,7 +448,13 @@ void m20::Assembler::generateDataLoad(const Instruction &instr)
     }
 
     // Check word aligned
-    assert(bytes.size() % 4 == 0);
+    if (bytes.size() % 4 != 0)
+    {
+        errors.emplace_back(M20ErrorType::ALIGNMENT,
+                            instr.token,
+                            "Instruction must be 4 byte aligned");
+        return;
+    }
     bytes.push_back((char) ((code >> 24) & 0xFF));
     bytes.push_back((char) ((code >> 16) & 0xFF));
     bytes.push_back((char) ((code >> 8) & 0xFF));
@@ -480,7 +491,13 @@ void m20::Assembler::generateBranch(const Instruction &instr)
     }
 
     // Check word aligned
-    assert(bytes.size() % 4 == 0);
+    if (bytes.size() % 4 != 0)
+    {
+        errors.emplace_back(M20ErrorType::ALIGNMENT,
+                            instr.token,
+                            "Instruction must be 4 byte aligned");
+        return;
+    }
     bytes.push_back((char) ((code >> 24) & 0xFF));
     bytes.push_back((char) ((code >> 16) & 0xFF));
     bytes.push_back((char) ((code >> 8) & 0xFF));
@@ -495,7 +512,13 @@ void m20::Assembler::generateSwi(const Instruction &instr)
     code |= instr.operand & 0x00FFFFFF;
 
     // Check word aligned
-    assert(bytes.size() % 4 == 0);
+    if (bytes.size() % 4 != 0)
+    {
+        errors.emplace_back(M20ErrorType::ALIGNMENT,
+                            instr.token,
+                            "Instruction must be 4 byte aligned");
+        return;
+    }
     bytes.push_back((char) ((code >> 24) & 0xFF));
     bytes.push_back((char) ((code >> 16) & 0xFF));
     bytes.push_back((char) ((code >> 8) & 0xFF));
@@ -673,12 +696,16 @@ void m20::Assembler::updateLabels()
         }
     }
 
-    size_t sectionIndex = 0;
     for (const auto &fixup : fixups)
     {
-        while (sections.at(sectionIndex).end < fixup.index)
+        size_t sectionIndex = 0;
+        for (size_t i = 0; i < sections.size(); ++i)
         {
-            ++sectionIndex;
+            if (sections[i].end > fixup.index)
+            {
+                sectionIndex = i;
+                break;
+            }
         }
 
         try
@@ -761,7 +788,7 @@ void m20::Assembler::addRelocation(m20::InstructionType type,
                                    const std::string &label)
 {
     if (label != "$"
-        && type != InstructionType::D2_LABEL
+        && type == InstructionType::B_RELATIVE_LABEL
         && labels.find(label)->second.index % 4 != 0)
     {
         throw std::range_error("Label not 4 byte aligned");
@@ -811,26 +838,29 @@ int m20::Assembler::getImmediate(unsigned int addr,
                                  InstructionType type)
 {
     bool relative = false;  // Relative or absolute
-    bool aligned = true;
+    bool relativePc = false;
+    bool aligned = false;
     int bits = 0;           // Number of bits
 
     switch (type)
     {
         case InstructionType::D2_LABEL:
             relative = false;
-            aligned = false;
             bits = 16;
             break;
         case InstructionType::B_RELATIVE_LABEL:
             relative = true;
+            relativePc = true;
+            aligned = true;
             bits = 23;
             break;
         case InstructionType::M_RELATIVE_LABEL:
             relative = true;
+            relativePc = true;
             bits = 16;
             break;
         case InstructionType::M_BASE_OFFSET_LABEL:
-            relative = false;
+            relative = true;
             bits = 12;
             break;
         default:
@@ -841,7 +871,12 @@ int m20::Assembler::getImmediate(unsigned int addr,
     auto offset = (int) label;
     if (relative)
     {
-        offset = label - addr - 4;
+        offset = label - addr;
+
+        if (relativePc)
+        {
+            offset -= 4;
+        }
     }
 
     if (aligned && offset % 4 != 0)
@@ -892,7 +927,10 @@ void m20::Assembler::printErrors(const std::string &filename,
         currentLine = e.token.line;
         ++totalErrors;
 
-        size_t index = lines[e.token.line].find_first_not_of(' ');
+        size_t index = (e.token.line == -1
+                        ? std::string::npos
+                        : lines[e.token.line - 1].find_first_not_of(' ')
+        );
         if (index == std::string::npos)
         {
             index = 0;

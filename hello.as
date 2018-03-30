@@ -15,8 +15,9 @@ section .text
 ;   Main entrypoint function
 main:
     push lp
-    mov r4, sp          ; void *buf
     sub sp, sp, #10     ; buf = alloc(10)
+    mov r4, sp          ; void *buf
+    sub sp, sp, #4      ; increment stack
     ldr r5, _num        ; int num
 
     mov r0, _string
@@ -41,7 +42,7 @@ main:
     mov r0, r4
     bwl print           ; print(buf)
 
-    add sp, sp, #10     ; deallocate buf
+    add sp, sp, #14     ; deallocate buf
 
     pop lp
     mov r0, #0
@@ -55,8 +56,8 @@ main:
 ;   return(r0)  : uint num, Fibonnaci number
 fib:
     cmp r0, #0
-    moveq r0, #1
-    moveq pc, lp        ; if (pos == 0) return 1
+    moveq r0, #0
+    moveq pc, lp        ; if (pos == 0) return 0
     cmp r0, #1
     moveq pc, lp        ; if (pos == 1) return 1
     push lp
@@ -83,4 +84,4 @@ _string:
 _string2:
     db "): \0"
 _num:
-    dw #20
+    dw #25

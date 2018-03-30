@@ -140,7 +140,7 @@ namespace m20
                        "(eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?",
                        std::regex_constants::icase),
             // MEM INSTRUCTION
-            std::regex("(ldrsb|ldrsh|ldrb|ldrs|ldr|strb|strh|str)"
+            std::regex("(ldrsb|ldrsh|ldrb|ldrh|ldr|strb|strh|str)"
                        "(eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?",
                        std::regex_constants::icase),
             // INSTRUCTION
