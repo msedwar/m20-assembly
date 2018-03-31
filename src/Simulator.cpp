@@ -83,6 +83,7 @@ void m20::Simulator::simulate()
         {
             std::cout << ">>>>> Undefined Instruction @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
+            printStatus();
             halt = true;
             break;
         }
@@ -112,8 +113,12 @@ void m20::Simulator::simulate()
             std::cout << ">>>>> Software Interrupt @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
 
+            int stream = *getRegister(0);
+            auto str = (unsigned) *getRegister(1);
             int len = *getRegister(2);
-            size_t str = (size_t) *getRegister(1);
+            std::cout << "write(" << std::dec << stream
+                      << ", 0x" << std::hex << str
+                      << ", " << len << ")" << std::endl;
             for (int i = 0; i < len; ++i)
             {
                 std::cout << mem[str + i];
@@ -261,6 +266,7 @@ void m20::Simulator::simulateData(int instr)
     switch (opcode)
     {
         case 0x00:  // NOOP
+            throw UndefinedInstructionException();
             break;
         case 0x01:  // ADD
             aluA = *getRegister(rn);

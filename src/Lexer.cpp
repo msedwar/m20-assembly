@@ -49,6 +49,17 @@ void m20::Lexer::lex(const std::string &in,
             }
         }
 
+        if (token.type == TokenType::D3_INSTR
+                && std::regex_search(token.raw, match, STATUS_UPDATE_REGEX))
+        {
+            token.updateStatus = true;
+            token.raw = token.raw.substr(0, token.raw.length() - 2);
+        }
+        else
+        {
+            token.updateStatus = false;
+        }
+
         if ((token.type == TokenType::D3_INSTR
             || token.type == TokenType::D2_INSTR
             || token.type == TokenType::D1_INSTR

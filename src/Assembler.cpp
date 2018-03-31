@@ -345,9 +345,12 @@ void m20::Assembler::generateDataProcessing(const Instruction &instr)
     code |= getConditionNibble(instr.cond);
     code |= getDataOpcode(instr.command);
 
-    // TODO(msedwar): updates
-//    int hasUpdate = 0x04000000;
-//    code |= hasUpdate;
+    int hasUpdate = 0x04000000;
+    if (!instr.token.updateStatus)
+    {
+        hasUpdate = 0;
+    }
+    code |= hasUpdate;
 
     int hasImmediate = 0x02000000;
     if (instr.type == InstructionType::D3_REGISTER

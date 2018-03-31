@@ -70,6 +70,7 @@ namespace m20
         Conditional condition;
         int line;
         int column;
+        bool updateStatus;
 
         Token();
 
@@ -125,7 +126,7 @@ namespace m20
             // D3 INSTRUCTION
             std::regex("(mul|add|adc|sub|sbc|div|udv|"
                        "or|and|xor|nor|bic|ror|lsl|lsr|asr)"
-                       "(eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?",
+                       "(eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?(\\.s)?",
                        std::regex_constants::icase),
             // D2 INSTRUCTION
             std::regex("(mov|mvn|cmp|cmn|tst|teq|srs|srl)"
@@ -153,6 +154,9 @@ namespace m20
 
     const std::regex CONDITIONAL_REGEX(
             "(eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)$",
+            std::regex_constants::icase);
+    const std::regex STATUS_UPDATE_REGEX(
+            "(\\.s)$",
             std::regex_constants::icase);
 
     const std::string &getTokenTypeName(TokenType type);

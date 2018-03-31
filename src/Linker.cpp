@@ -91,7 +91,7 @@ bool m20::Linker::link(const std::vector<const std::string> &files,
         section.deleteBytes();
     }
 
-    for (auto i = (unsigned int) (4 - bytes.size() % 4); i < 4; ++i)
+    for (auto i = (unsigned int) (bytes.size() % 4); i < 4; ++i)
     {
         bytes.push_back(0);
     }
