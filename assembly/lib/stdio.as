@@ -7,7 +7,7 @@
 
 ; EXPORTS ======================================================================
 
-global print
+global puts
 
 
 ; IMPORTS ======================================================================
@@ -20,10 +20,10 @@ extern strlen
 section .text
 
 ; ------------------------------------------------------------------------------
-;   void print( void * buffer )
+;   int puts( const void * buffer )
 ;   Prints a C-string to stdout
-;   r0          : void * buffer, Pointer to C-string
-print:
+;   r0          : const void * buffer, Pointer to C-string
+puts:
     push lp             ; Save callee-save registers
     push r7
 

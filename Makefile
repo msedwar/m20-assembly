@@ -1,28 +1,48 @@
+# Constants --------------------------------------------------------------------
+
 ASSEMBLE = bin/cmake-build-debug/assemble
 LINK = bin/cmake-build-debug/link
 SIMULATE = bin/cmake-build-debug/simulate
 
-for: for.mc
+OUTDIR = bin/assembly
+OBJDIR = $(OUTDIR)/obj
+MCDIR = $(OUTDIR)/mc
+ASDIR = assembly
+
+# For --------------------------------------------------------------------------
+
+for: $(MCDIR)/for.mc
 	@$(SIMULATE) $^
 
-for.mc: for.obj print.obj string.obj
+$(MCDIR)/for.mc: $(OBJDIR)/test/for.obj \
+	$(OBJDIR)/lib/stdio.obj \
+	$(OBJDIR)/lib/stdlib.obj \
+	$(OBJDIR)/lib/string.obj
 	@$(LINK) $@ $^
 
-for.obj: for.as
-	@$(ASSEMBLE) $^ $@
 
-print.obj: print.as
-	@$(ASSEMBLE) $^ $@
+# OS ---------------------------------------------------------------------------
 
-string.obj: string.as
-	@$(ASSEMBLE) $^ $@
+os: $(MCDIR)/os.mc
+	@$(SIMULATE) $^
+	
+$(MCDIR)/os.mc: $(OBJDIR)/os/*.obj
+	@$(LINK) $@ $^
 
-syscall.obj: syscall.as
-	@$(ASSEMBLE) $^ $@
+
+# Automatic Rules --------------------------------------------------------------
+
+$(OBJDIR)/%.obj: $(ASDIR)/%.as
+	@$(ASSEMBLE) $< $@
+
+
+# Aliases ----------------------------------------------------------------------
 
 clean:
 	@rm -rf *.obj
 	@rm -rf *.mc
+	@rm -rf $(MCDIR)/*.mc
+	@rm -rf $(OBJDIR)/**/*.obj
 
 .PHONY:
-	clean
+	clean for os
