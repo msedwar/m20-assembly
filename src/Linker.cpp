@@ -91,9 +91,13 @@ bool m20::Linker::link(const std::vector<const std::string> &files,
         section.deleteBytes();
     }
 
-    for (auto i = (unsigned int) (bytes.size() % 4); i < 4; ++i)
+    // Align Executable size
+    if (bytes.size() % 4 != 0 )
     {
-        bytes.push_back(0);
+        for (auto i = (unsigned int) (bytes.size() % 4); i < 4; ++i)
+        {
+            bytes.push_back(0);
+        }
     }
 
     std::ofstream outfile(executable, std::ios::out | std::ios::binary);
@@ -269,7 +273,15 @@ void m20::Linker::fixupSection(unsigned int index)
         auto ids = definedSymbols.find(reloc.label);
         try
         {
-            if (ifs != fileSymbols.end()
+            if (reloc.label.empty())
+            {
+                fixupSymbol(
+                        reloc.type,
+                        section.address + (reloc.address - section.begin),
+                        section.address + (reloc.address - section.begin)
+                );
+            }
+            else if (ifs != fileSymbols.end()
                 && ifs->type == SymbolType::LOCAL)
             {
                 fixupSymbol(
@@ -368,6 +380,10 @@ int m20::Linker::getImmediate(unsigned int addr,
             relative = true;
             bits = 12;
             break;
+        case InstructionType::DIRECTIVE_DATA_ADDR:
+            relative = false;
+            bits = 32;
+            break;
         default:
             assert(false);
             break;
@@ -391,6 +407,10 @@ int m20::Linker::getImmediate(unsigned int addr,
 
     unsigned int mask = 0xFFFFFFFF;
     mask <<= bits;
+    if (bits == 32)
+    {
+        mask = 0;
+    }
 
     if (offset < 0)
     {

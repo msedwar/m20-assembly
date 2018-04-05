@@ -408,9 +408,10 @@ void m20::Parser::expect(const m20::TokenType type)
 size_t m20::Parser::parseNumber(const Token &num, int maxBits)
 {
     assert(num.raw.size() >= 2);
+    assert(maxBits <= 64);
 
     size_t result = 0;
-    char negative = 0;
+    int negative = 0;
     try
     {
         if (tolower(num.raw[0]) == '#')  // Decimal
@@ -423,38 +424,47 @@ size_t m20::Parser::parseNumber(const Token &num, int maxBits)
             {
                 negative = 2;
             }
-            result = (unsigned) std::stol(num.raw.substr(1), nullptr, 10);
+            result = (unsigned long long)
+                    std::stoll(num.raw.substr(1), nullptr, 10);
         }
         else if (tolower(num.raw[1]) == 'x')
         {
-            result = std::stoul(num.raw.substr(2), nullptr, 16);
+            result = std::stoull(num.raw.substr(2), nullptr, 16);
         }
         else if (tolower(num.raw[1]) == 'b')
         {
-            result = std::stoul(num.raw.substr(2), nullptr, 2);
+            result = std::stoull(num.raw.substr(2), nullptr, 2);
         }
         else
         {
-            result = std::stoul(num.raw.substr(1), nullptr, 8);
+            result = std::stoull(num.raw.substr(1), nullptr, 8);
         }
     }
-    catch (const std::invalid_argument &e)
+    catch (...)
     {
         errors.emplace_back(M20ErrorType::SYNTAX, num,
                          "Invalid numeric literal");
         throw 0;
     }
 
-    size_t mask = ((size_t) 0xFFFFFFFFFFFFFFFF) << maxBits;
+    size_t mask = ((size_t) 0xFFFFFFFFFFFFFFFF) << (size_t) maxBits;
+    size_t mask2 = ((size_t) 0xFFFFFFFFFFFFFFFF) << (size_t) (maxBits - 1);
     if (maxBits == 64)
     {
         mask = 0;
     }
-    result = result & ~mask;
 
-    size_t masked = result & (((size_t) 0x1) << (maxBits - 1));
-    if ((masked && negative == 2)
-        || (!masked && negative == 1))
+    if ((negative != 1 && (result & mask) != 0)
+            || (negative == 1 && ((result & mask) != mask)))
+    {
+        errors.emplace_back(M20ErrorType::SYNTAX, num,
+                            "Numeric literal out of range (should be "
+                            + std::to_string(maxBits) + " bits)");
+        throw 0;
+    }
+
+    if ((negative == 2 && (result & mask2) != 0)
+        || (negative == 1 && (result & mask2) != mask2))
     {
         errors.emplace_back(M20ErrorType::SYNTAX, num,
                             "Invalid numeric literal "
@@ -462,19 +472,7 @@ size_t m20::Parser::parseNumber(const Token &num, int maxBits)
         throw 0;
     }
 
-    mask = ((size_t) 0xFFFFFFFFFFFFFFFF) << maxBits;
-    if (maxBits == 64)
-    {
-        mask = 0;
-    }
-
-    if (result & mask)
-    {
-        errors.emplace_back(M20ErrorType::SYNTAX, num,
-                            "Numeric literal out of range (should be "
-                            + std::to_string(maxBits) + " bits)");
-        throw 0;
-    }
+    result = result & ~mask;
 
     return result;
 }

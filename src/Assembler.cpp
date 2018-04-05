@@ -189,12 +189,18 @@ void m20::Assembler::generate(std::vector<m20::Instruction> &items)
         }
         else if (instr.type == InstructionType::DIRECTIVE_DATA)
         {
-            if (sections.empty() || sections.back().text)
+            if (sections.empty())
+            {
+                errors.emplace_back(M20ErrorType::SECTION,
+                                    items.front().token,
+                                    "Data declarations must be in a section");
+            }
+            else if (sections.back().text && instr.operand % 4 != 0)
             {
                 errors.emplace_back(M20ErrorType::SECTION,
                                     instr.token,
-                                    "Data declarations must be in a "
-                                            "non-text section");
+                                    "Non-aligned data declarations must be in "
+                                            "a non-text section");
             }
             else
             {
@@ -207,19 +213,33 @@ void m20::Assembler::generate(std::vector<m20::Instruction> &items)
         }
         else if (instr.type == InstructionType::DIRECTIVE_DATA_ADDR)
         {
-            if (sections.empty() || sections.back().text)
+            if (sections.empty())
             {
                 errors.emplace_back(M20ErrorType::SECTION,
-                                    instr.token,
-                                    "Data declarations must be in a "
-                                            "non-text section");
+                                    items.front().token,
+                                    "Data declarations must be in a section");
             }
             else
             {
-                fixups.emplace_back("$",
-                                    instr.token,
-                                    (unsigned int) bytes.size(),
-                                    instr.type);
+                if (instr.label == "$")
+                {
+                    fixups.emplace_back("$",
+                                        instr.token,
+                                        (unsigned int) bytes.size(),
+                                        instr.type);
+                }
+                else
+                {
+                    fixups.emplace_back(instr.label,
+                                        instr.token,
+                                        (unsigned int) bytes.size(),
+                                        instr.type);
+                }
+
+                bytes.push_back(0);
+                bytes.push_back(0);
+                bytes.push_back(0);
+                bytes.push_back(0);
             }
         }
         else if (instr.type == InstructionType::DIRECTIVE_SPACE)
@@ -791,7 +811,8 @@ void m20::Assembler::addRelocation(m20::InstructionType type,
                                    const std::string &label)
 {
     if (label != "$"
-        && type == InstructionType::B_RELATIVE_LABEL
+        && (type == InstructionType::B_RELATIVE_LABEL
+            || type == InstructionType::DIRECTIVE_DATA_ADDR)
         && labels.find(label)->second.index % 4 != 0)
     {
         throw std::range_error("Label not 4 byte aligned");
@@ -866,6 +887,10 @@ int m20::Assembler::getImmediate(unsigned int addr,
             relative = true;
             bits = 12;
             break;
+        case InstructionType::DIRECTIVE_DATA_ADDR:
+            relative = false;
+            bits = 32;
+            break;
         default:
             assert(false);
             break;
@@ -889,6 +914,10 @@ int m20::Assembler::getImmediate(unsigned int addr,
 
     unsigned int mask = 0xFFFFFFFF;
     mask <<= bits;
+    if (bits == 32)
+    {
+        mask = 0;
+    }
 
     if (offset < 0)
     {

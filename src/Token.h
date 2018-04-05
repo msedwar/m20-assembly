@@ -115,7 +115,7 @@ namespace m20
                        "|\\.text|\\.data"
                        "|d[bhwd]|space|\\$)", std::regex_constants::icase),
             // REGISTER
-            std::regex("(r0|r1|r2|r3|r4|r5|r6|r7|r8|r9|r10|r11|r12"
+            std::regex("(r10|r11|r12|r0|r1|r2|r3|r4|r5|r6|r7|r8|r9"
                        "|sp|lp|pc|st|sv)", std::regex_constants::icase),
             // COMMA
             std::regex(","),

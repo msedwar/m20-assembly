@@ -396,6 +396,7 @@ void m20::Simulator::simulateData(int instr)
             shouldUpdate = true;
             break;
         case 0x17:  // PUSH
+            *getRegister(13) -= 4;
             if (hasImmediate)
             {
                 storeWord(*getRegister(13), immediate20);
@@ -404,7 +405,6 @@ void m20::Simulator::simulateData(int instr)
             {
                 storeWord(*getRegister(13), *getRegister(immediate20));
             }
-            *getRegister(13) -= 4;
             break;
         case 0x18:  // POP
             if (hasImmediate)
@@ -413,9 +413,9 @@ void m20::Simulator::simulateData(int instr)
             }
             else
             {
-                *getRegister(13) += 4;
                 *getRegister(immediate20) = loadWord(*getRegister(13));
             }
+            *getRegister(13) += 4;
             break;
         case 0x19:  // SRL
             throw UsageAbortException();
