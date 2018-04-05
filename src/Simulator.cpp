@@ -15,6 +15,8 @@
 
 #include "Simulator.h"
 
+const std::string m20::Bios::CSI = "\x1B[";
+
 void m20::Simulator::load(const std::string &fname)
 {
     std::ifstream infile(fname, std::ios::ate | std::ios::binary);
@@ -43,6 +45,14 @@ void m20::Simulator::simulate()
     *getRegister(14) = 0xfffc;      // Set link ptr to halt handler
     storeWord(0xfffc, 0xE1F00000);  // Create halt handler
     halt = false;
+
+    // Initialize BIOS
+    for (unsigned int i = 0; i < Bios::WIDTH * Bios::HEIGHT; ++i)
+    {
+        bios.write(0);
+    }
+    bios.setCursor(0);
+    bios.flush();
 
     while (!halt)
     {
@@ -83,7 +93,6 @@ void m20::Simulator::simulate()
         {
             std::cout << ">>>>> Undefined Instruction @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
-            printStatus();
             halt = true;
             break;
         }
@@ -110,20 +119,26 @@ void m20::Simulator::simulate()
         }
         catch (const SoftwareInterruptException &e)
         {
-            std::cout << ">>>>> Software Interrupt @ 0x"
-                      << std::hex << reg_pc - 4 << std::endl;
-
-            int stream = *getRegister(0);
-            auto str = (unsigned) *getRegister(1);
-            int len = *getRegister(2);
-            std::cout << "write(" << std::dec << stream
-                      << ", 0x" << std::hex << str
-                      << ", " << len << ")" << std::endl;
-            for (int i = 0; i < len; ++i)
+            // Software Interrupt
+            if (e.vector == 0x00)
             {
-                std::cout << mem[str + i];
+                reg_pc = e.index;
             }
-            std::cout << std::endl;
+
+            // BIOS Interrupt
+            else if (e.vector == 0x10)
+            {
+                if (*getRegister(0) == 0x0a)
+                {
+                    bios.write((char) (*getRegister(1) & 0xFF));
+                }
+            }
+
+            // Invalid SWI
+            else
+            {
+                throw UsageAbortException();
+            }
         }
         catch (...)
         {
@@ -135,6 +150,10 @@ void m20::Simulator::simulate()
         ++instructionsExecuted;
     }
 
+    // Flush BIOS
+    bios.flush();
+
+    // Print halt information
     printStatus();
     std::cout << ">>>>> HALTED <<<<<" << std::endl;
 }
@@ -571,5 +590,6 @@ void m20::Simulator::simulateBranch(int instr)
 
 void m20::Simulator::simulateSwi(int instr)
 {
-    throw SoftwareInterruptException();
+    int vector = instr & 0x00FFFFFF;
+    throw SoftwareInterruptException(vector);
 }

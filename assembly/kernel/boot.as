@@ -2,8 +2,10 @@
 ; Operating System Bootloader
 ;
 ;   Author:         Matthew Edwards
-;   Dependencies:   
+;   Dependencies:   reset_handler
 ; ==============================================================================
+
+extern __reset
 
 entry __interrupt_vector_table
 
@@ -13,22 +15,22 @@ entry __interrupt_vector_table
 section .text
 
 __interrupt_vector_table:
-    ldr pc, pc, 0x40            ; <__reset>
-    ldr pc, pc, 0x40            ; <__undefined_instruction>
-    ldr pc, pc, 0x40            ; <__software_interrupt>
-    ldr pc, pc, 0x40            ; <__prefetch_abort>
-    ldr pc, pc, 0x40            ; <__data_abort>
-    ldr pc, pc, 0x40            ; <__usage_abort>
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; reserved
-    ldr pc, pc, 0x40            ; <__irq>
+    ldr pc, pc, 0x3c            ; <__reset>
+    ldr pc, pc, 0x3c            ; <__undefined_instruction>
+    ldr pc, pc, 0x3c            ; <__software_interrupt>
+    ldr pc, pc, 0x3c            ; <__prefetch_abort>
+    ldr pc, pc, 0x3c            ; <__data_abort>
+    ldr pc, pc, 0x3c            ; <__usage_abort>
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; reserved
+    ldr pc, pc, 0x3c            ; <__irq>
 
     dw __reset                  ; <__reset>
     dw __undefined_instruction  ; <__undefined_instruction>
@@ -49,12 +51,11 @@ __interrupt_vector_table:
 
 ; Label Definitions to allow compilation
 
-__reset:
 __undefined_instruction:
 __software_interrupt:
 __prefetch_abort:
 __data_abort:
 __usage_abort:
 __irq:
+    mov r0, 0x7F
     halt
-

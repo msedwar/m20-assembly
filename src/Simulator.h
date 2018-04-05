@@ -19,11 +19,11 @@ namespace m20
 {
     struct ProcessorException : public std::runtime_error
     {
-        const int vector;
+        const int index;
 
-        ProcessorException(const std::string &message, const int vector)
+        ProcessorException(const std::string &message, const int index)
             : std::runtime_error(message),
-              vector(vector)
+              index(index)
         {
             //
         }
@@ -32,7 +32,7 @@ namespace m20
     struct UndefinedInstructionException : public ProcessorException
     {
         UndefinedInstructionException()
-                : ProcessorException("Undefined Instruction", 4)
+                : ProcessorException("Undefined Instruction", 0x4)
         {
             //
         }
@@ -40,8 +40,11 @@ namespace m20
 
     struct SoftwareInterruptException : public ProcessorException
     {
-        SoftwareInterruptException()
-                : ProcessorException("Software Interrupt", 8)
+        const int vector;
+
+        SoftwareInterruptException(int vector)
+                : ProcessorException("Software Interrupt", 0x8),
+                  vector(vector)
         {
             //
         }
@@ -50,7 +53,7 @@ namespace m20
     struct PrefetchAbortException : public ProcessorException
     {
         PrefetchAbortException()
-                : ProcessorException("Prefetch Abort", 12)
+                : ProcessorException("Prefetch Abort", 0xc)
         {
             //
         }
@@ -59,16 +62,7 @@ namespace m20
     struct DataAbortException : public ProcessorException
     {
         DataAbortException()
-                : ProcessorException("Data Abort", 16)
-        {
-            //
-        }
-    };
-
-    struct InterruptException : public ProcessorException
-    {
-        InterruptException()
-                : ProcessorException("Hardware interrupt", 20)
+                : ProcessorException("Data Abort", 0x10)
         {
             //
         }
@@ -77,10 +71,74 @@ namespace m20
     struct UsageAbortException : public ProcessorException
     {
         UsageAbortException()
-                : ProcessorException("Usage Abort", 24)
+                : ProcessorException("Usage Abort", 0x14)
         {
             //
         }
+    };
+
+    struct InterruptException : public ProcessorException
+    {
+        InterruptException()
+                : ProcessorException("Hardware interrupt", 0x38)
+        {
+            //
+        }
+    };
+
+    class Bios
+    {
+    public:
+        static const unsigned int WIDTH = 80;
+        static const unsigned int HEIGHT = 45;
+
+        static const std::string CSI;
+
+        void setCursor(unsigned int cursor)
+        {
+            this->cursor = cursor;
+        }
+
+        void write(char byte)
+        {
+            if (cursor >= WIDTH * HEIGHT)
+            {
+                cursor = 0;
+            }
+            if (byte == '\n')
+            {
+                cursor = ((cursor / WIDTH) + 1) * WIDTH;
+            }
+            else
+            {
+                mem[cursor] = byte;
+                std::cout << CSI << cursor / WIDTH + 1
+                          << ";" << cursor % WIDTH + 1 << "H"
+                          << byte;
+                ++cursor;
+            }
+        }
+
+        void flush()
+        {
+            for (size_t y = 0; y < HEIGHT; ++y)
+            {
+                for (size_t x = 0; x < WIDTH; ++x)
+                {
+                    char c = mem[WIDTH * y + x];
+                    if (c != 0)
+                    {
+                        std::cout << c;
+                    }
+                }
+                std::cout << "\n";
+            }
+            std::cout << std::flush;
+        }
+
+    private:
+        unsigned int cursor;
+        char mem[WIDTH * HEIGHT];
     };
 
     class Simulator
@@ -128,6 +186,8 @@ namespace m20
 
         char *mem;
         size_t instructionsExecuted;
+
+        Bios bios;
 
         bool isCondition(int instr);
         void simulateData(int instr);

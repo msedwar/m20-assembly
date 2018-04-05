@@ -9,6 +9,8 @@ OBJDIR = $(OUTDIR)/obj
 MCDIR = $(OUTDIR)/mc
 ASDIR = assembly
 
+default: kernel
+
 # For --------------------------------------------------------------------------
 
 for: $(MCDIR)/for.mc
@@ -21,12 +23,16 @@ $(MCDIR)/for.mc: $(OBJDIR)/test/for.obj \
 	@$(LINK) $@ $^
 
 
-# OS ---------------------------------------------------------------------------
+# Kernel -----------------------------------------------------------------------
 
-os: $(MCDIR)/os.mc
+kernel: $(MCDIR)/kernel.mc
 	@$(SIMULATE) $^
 	
-$(MCDIR)/os.mc: $(OBJDIR)/os/*.obj
+$(MCDIR)/kernel.mc: $(OBJDIR)/kernel/boot.obj \
+	$(OBJDIR)/kernel/io.obj \
+	$(OBJDIR)/kernel/reset_handler.obj \
+	$(OBJDIR)/lib/stdlib.obj \
+	$(OBJDIR)/lib/string.obj
 	@$(LINK) $@ $^
 
 
@@ -45,4 +51,4 @@ clean:
 	@rm -rf $(OBJDIR)/**/*.obj
 
 .PHONY:
-	clean for os
+	clean for kernel default
