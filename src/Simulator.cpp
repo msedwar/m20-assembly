@@ -91,6 +91,9 @@ void m20::Simulator::simulate()
         }
         catch (const UndefinedInstructionException &e)
         {
+            // Flush BIOS
+            bios.flush();
+
             std::cout << ">>>>> Undefined Instruction @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
             halt = true;
@@ -98,6 +101,9 @@ void m20::Simulator::simulate()
         }
         catch (const PrefetchAbortException &e)
         {
+            // Flush BIOS
+            bios.flush();
+
             std::cout << ">>>>> Prefetch Abort @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
             halt = true;
@@ -105,6 +111,9 @@ void m20::Simulator::simulate()
         }
         catch (const DataAbortException &e)
         {
+            // Flush BIOS
+            bios.flush();
+
             std::cout << ">>>>> Data Abort @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
             halt = true;
@@ -112,6 +121,9 @@ void m20::Simulator::simulate()
         }
         catch (const UsageAbortException &e)
         {
+            // Flush BIOS
+            bios.flush();
+
             std::cout << ">>>>> Usage Abort @ 0x"
                       << std::hex << reg_pc - 4 << std::endl;
             halt = true;
@@ -142,6 +154,9 @@ void m20::Simulator::simulate()
         }
         catch (...)
         {
+            // Flush BIOS
+            bios.flush();
+
             std::cout << ">>>>> Undefined Interrupt Vector" << std::endl;
             halt = true;
             break;
